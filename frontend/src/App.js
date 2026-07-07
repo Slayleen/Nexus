@@ -1,55 +1,62 @@
-import { useEffect } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
-import { HOME } from "@/constants/testIds";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/AuthContext";
+import { Toaster } from "sonner";
+import AppShell from "@/components/AppShell";
+import Landing from "@/pages/Landing";
+import Auth from "@/pages/Auth";
+import Dashboard from "@/pages/Dashboard";
+import Match from "@/pages/Match";
+import Projects from "@/pages/Projects";
+import Opportunities from "@/pages/Opportunities";
+import Messages from "@/pages/Messages";
+import Forum from "@/pages/Forum";
+import Profile from "@/pages/Profile";
+import Discover from "@/pages/Discover";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
-
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
-
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
+function Loader() {
   return (
-    <div>
-      <header className="App-header">
-        <a
-          data-testid={HOME.emergentLink}
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
+    <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7]">
+      <div className="font-display text-2xl font-black animate-pulse">Loading Nexus…</div>
     </div>
   );
-};
+}
+
+function Protected({ children }) {
+  const { user, ready } = useAuth();
+  if (!ready) return <Loader />;
+  if (!user) return <Navigate to="/login" replace />;
+  return <AppShell>{children}</AppShell>;
+}
+
+function PublicOnly({ children }) {
+  const { user, ready } = useAuth();
+  if (!ready) return <Loader />;
+  if (user) return <Navigate to="/app" replace />;
+  return children;
+}
 
 function App() {
   return (
-    <div className="App">
+    <AuthProvider>
+      <Toaster position="top-right" richColors />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
+          <Route path="/" element={<PublicOnly><Landing /></PublicOnly>} />
+          <Route path="/login" element={<PublicOnly><Auth mode="login" /></PublicOnly>} />
+          <Route path="/signup" element={<PublicOnly><Auth mode="signup" /></PublicOnly>} />
+          <Route path="/app" element={<Protected><Dashboard /></Protected>} />
+          <Route path="/app/match" element={<Protected><Match /></Protected>} />
+          <Route path="/app/projects" element={<Protected><Projects /></Protected>} />
+          <Route path="/app/opportunities" element={<Protected><Opportunities /></Protected>} />
+          <Route path="/app/discover" element={<Protected><Discover /></Protected>} />
+          <Route path="/app/messages" element={<Protected><Messages /></Protected>} />
+          <Route path="/app/forum" element={<Protected><Forum /></Protected>} />
+          <Route path="/app/profile" element={<Protected><Profile /></Protected>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
-    </div>
+    </AuthProvider>
   );
 }
 

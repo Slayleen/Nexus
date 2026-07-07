@@ -1,0 +1,57 @@
+import { useEffect, useState } from "react";
+import { api } from "@/api";
+import { PageHead } from "@/components/common";
+import { Trophy, CalendarBlank, ArrowSquareOut, Buildings } from "@phosphor-icons/react";
+
+const TYPES = ["All", "Research", "Competition", "Scholarship", "Internship", "Hackathon"];
+const TYPE_COLOR = {
+  Research: "bg-[#A0C4FF]", Competition: "bg-[#FF7B54]", Scholarship: "bg-[#FFD166]",
+  Internship: "bg-[#2ECC71] text-white", Hackathon: "bg-[#FFB4A2]",
+};
+
+export default function Opportunities() {
+  const [opps, setOpps] = useState([]);
+  const [filter, setFilter] = useState("All");
+
+  useEffect(() => { api.get("/opportunities").then((r) => setOpps(r.data)).catch(() => {}); }, []);
+  const shown = filter === "All" ? opps : opps.filter((o) => o.type === filter);
+
+  return (
+    <div className="max-w-6xl mx-auto px-5 md:px-10 py-8">
+      <PageHead label="Opportunity Board" title="Discover what's next." />
+
+      <div className="flex flex-wrap gap-2 mb-6">
+        {TYPES.map((t) => (
+          <button key={t} onClick={() => setFilter(t)} data-testid={`opp-filter-${t}`}
+            className={`nb-chip ${filter === t ? "bg-[#FF7B54]" : "bg-white"}`}>{t}</button>
+        ))}
+      </div>
+
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {shown.map((o) => (
+          <div key={o.id} className="nb-card nb-card-hover p-5 flex flex-col" data-testid={`opp-${o.id}`}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 bg-[#FFD166] border-2 border-[#0A0A0A] rounded-lg flex items-center justify-center">
+                <Trophy size={20} weight="bold" />
+              </div>
+              <span className={`nb-chip ${TYPE_COLOR[o.type] || "bg-white"}`}>{o.type}</span>
+            </div>
+            <h3 className="font-display text-xl font-bold tracking-tight leading-tight">{o.title}</h3>
+            <div className="flex items-center gap-1 text-xs font-bold text-[#4A4A4A] mt-1 mb-2">
+              <Buildings size={14} weight="bold" /> {o.org}
+            </div>
+            <p className="text-sm text-[#4A4A4A] font-medium line-clamp-3 mb-4">{o.description}</p>
+            <div className="mt-auto flex items-center justify-between">
+              <span className="flex items-center gap-1 text-xs font-bold text-[#FF7B54]">
+                <CalendarBlank size={14} weight="bold" /> {o.deadline}
+              </span>
+              <a href={o.link} target="_blank" rel="noreferrer" className="nb-btn nb-btn-accent text-sm py-2" data-testid={`opp-apply-${o.id}`}>
+                Apply <ArrowSquareOut size={14} weight="bold" />
+              </a>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
