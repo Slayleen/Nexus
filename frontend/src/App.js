@@ -25,7 +25,7 @@ function Loader() {
 function Protected({ children }) {
   const { user, ready } = useAuth();
   if (!ready) return <Loader />;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/" replace />;
   return <AppShell>{children}</AppShell>;
 }
 
