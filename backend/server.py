@@ -57,6 +57,18 @@ def clean(doc: dict) -> dict:
     doc.pop("password_hash", None)
     return doc
 
+async def user_map(ids):
+    oids = []
+    for i in set(ids):
+        try:
+            oids.append(ObjectId(i))
+        except Exception:
+            pass
+    if not oids:
+        return {}
+    docs = await db.users.find({"_id": {"$in": oids}}, {"name": 1, "avatar": 1}).to_list(len(oids))
+    return {str(d["_id"]): {"id": str(d["_id"]), "name": d.get("name"), "avatar": d.get("avatar")} for d in docs}
+
 class RegisterInput(BaseModel):
     name: str
     email: str
@@ -265,11 +277,11 @@ async def ai_match(data: MatchInput, user: dict = Depends(get_current_user)):
 @api_router.get("/projects")
 async def list_projects(user: dict = Depends(get_current_user)):
     projects = await db.projects.find().sort("created_at", -1).to_list(200)
+    umap = await user_map([p["owner_id"] for p in projects])
     out = []
     for p in projects:
         p = clean(p)
-        owner = await db.users.find_one({"_id": ObjectId(p["owner_id"])})
-        p["owner"] = {"id": str(owner["_id"]), "name": owner["name"], "avatar": owner.get("avatar")} if owner else None
+        p["owner"] = umap.get(p["owner_id"])
         out.append(p)
     return out
 
@@ -318,12 +330,12 @@ async def conversations(user: dict = Depends(get_current_user)):
         other = m["to_user_id"] if m["from_user_id"] == user["id"] else m["from_user_id"]
         if other not in partners:
             partners[other] = m
+    umap = await user_map(list(partners.keys()))
     out = []
     for pid, last in partners.items():
-        u = await db.users.find_one({"_id": ObjectId(pid)})
+        u = umap.get(pid)
         if u:
-            out.append({"user": {"id": str(u["_id"]), "name": u["name"], "avatar": u.get("avatar")},
-                        "last_message": last["text"], "last_at": last["created_at"]})
+            out.append({"user": u, "last_message": last["text"], "last_at": last["created_at"]})
     return out
 
 @api_router.get("/messages/{other_id}")
@@ -345,12 +357,18 @@ async def post_message(data: MessageInput, user: dict = Depends(get_current_user
 async def list_forum(community: Optional[str] = None, user: dict = Depends(get_current_user)):
     q = {"community": community} if community else {}
     posts = await db.forum_posts.find(q).sort("created_at", -1).to_list(200)
+    umap = await user_map([p["author_id"] for p in posts])
+    counts = {}
+    if posts:
+        pipeline = [{"$match": {"post_id": {"$in": [str(p["_id"]) for p in posts]}}},
+                    {"$group": {"_id": "$post_id", "n": {"$sum": 1}}}]
+        async for row in db.forum_comments.aggregate(pipeline):
+            counts[row["_id"]] = row["n"]
     out = []
     for p in posts:
         p = clean(p)
-        author = await db.users.find_one({"_id": ObjectId(p["author_id"])})
-        p["author"] = {"id": str(author["_id"]), "name": author["name"], "avatar": author.get("avatar")} if author else None
-        p["comment_count"] = await db.forum_comments.count_documents({"post_id": p["id"]})
+        p["author"] = umap.get(p["author_id"])
+        p["comment_count"] = counts.get(p["id"], 0)
         out.append(p)
     return out
 
@@ -368,11 +386,11 @@ async def create_post(data: ForumPostInput, user: dict = Depends(get_current_use
 @api_router.get("/forum/{pid}/comments")
 async def get_comments(pid: str, user: dict = Depends(get_current_user)):
     comments = await db.forum_comments.find({"post_id": pid}).sort("created_at", 1).to_list(500)
+    umap = await user_map([c["author_id"] for c in comments])
     out = []
     for c in comments:
         c = clean(c)
-        author = await db.users.find_one({"_id": ObjectId(c["author_id"])})
-        c["author"] = {"id": str(author["_id"]), "name": author["name"], "avatar": author.get("avatar")} if author else None
+        c["author"] = umap.get(c["author_id"])
         out.append(c)
     return out
 
