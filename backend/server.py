@@ -16,7 +16,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, BeforeValidator
 from bson import ObjectId
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from groq import AsyncGroq
 
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
@@ -254,10 +254,16 @@ async def ai_match(data: MatchInput, user: dict = Depends(get_current_user)):
     )
     prompt = f"GOAL: {data.goal}\n\nCANDIDATES:\n{json.dumps(candidates)}"
     try:
-        chat = LlmChat(api_key=os.environ["EMERGENT_LLM_KEY"],
-                       session_id=f"match-{user['id']}", system_message=system).with_model("openai", "gpt-5.4-mini")
-        reply = await chat.send_message(UserMessage(text=prompt))
-        text = (reply if isinstance(reply, str) else str(reply)).strip()
+        groq_client = AsyncGroq(api_key=os.environ["GROQ_API_KEY"])
+        completion = await groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": prompt},
+            ],
+            response_format={"type": "json_object"},
+        )
+        text = completion.choices[0].message.content.strip()
         if text.startswith("```"):
             text = text.split("```")[1].replace("json", "", 1).strip()
         parsed = json.loads(text)
