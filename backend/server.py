@@ -736,10 +736,22 @@ app.add_middleware(
 async def startup():
     await db.users.create_index("email", unique=True)
     await seed()
+    await backfill_opportunity_locations()
 
 @app.on_event("shutdown")
 async def shutdown():
     client.close()
+
+async def backfill_opportunity_locations():
+    """Fill in location for any already-posted opportunity that's missing one
+    (e.g. rows created before the location field existed). Matches by title
+    against seed_data.OPPORTUNITIES; falls back to 'Remote' if not found."""
+    from seed_data import OPPORTUNITIES
+    by_title = {o["title"]: o.get("location", "Remote") for o in OPPORTUNITIES}
+    cursor = db.opportunities.find({"$or": [{"location": {"$exists": False}}, {"location": ""}, {"location": None}]})
+    async for o in cursor:
+        location = by_title.get(o.get("title"), "Remote")
+        await db.opportunities.update_one({"_id": o["_id"]}, {"$set": {"location": location}})
 
 async def seed():
     from seed_data import STUDENTS, PROJECTS, OPPORTUNITIES, FORUM
