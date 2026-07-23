@@ -334,16 +334,218 @@ def test_regression():
     print("\n✅ All REGRESSION tests passed!")
 
 
+def test_smart_opportunities():
+    """Test Smart Opportunities recommendation endpoint."""
+    print("\n=== Testing SMART OPPORTUNITIES RECOMMENDATION ===")
+    
+    # Test 1: Unauthenticated request returns 401
+    print("\n1. Testing unauthenticated request returns 401...")
+    r = requests.get(f"{API}/opportunities/recommended", timeout=15)
+    assert r.status_code == 401, f"Expected 401 for unauthenticated request, got {r.status_code}"
+    print("✓ Unauthenticated request correctly returns 401")
+    
+    # Test 2: Alice (Boston, MA) - should get MA opportunities ranked higher
+    print("\n2. Testing Alice (Boston, MA) recommendations...")
+    alice_session = login(ALICE_EMAIL)
+    
+    # Verify Alice's profile has location set
+    alice_profile = alice_session.get(f"{API}/auth/me", timeout=15).json()
+    print(f"   Alice's location: {alice_profile.get('location')}")
+    print(f"   Alice's skills: {alice_profile.get('skills')}")
+    print(f"   Alice's interests: {alice_profile.get('interests')}")
+    
+    r = alice_session.get(f"{API}/opportunities/recommended?limit=5", timeout=15)
+    assert r.status_code == 200, f"Recommendation request failed: {r.status_code} {r.text}"
+    
+    data = r.json()
+    
+    # Verify response shape
+    assert "recommendations" in data, "Response missing 'recommendations' field"
+    assert "engine" in data, "Response missing 'engine' field"
+    assert data["engine"] == "local", f"Expected engine='local' (no GROQ_API_KEY), got '{data['engine']}'"
+    
+    recommendations = data["recommendations"]
+    assert isinstance(recommendations, list), "Recommendations should be a list"
+    assert len(recommendations) <= 5, f"Expected <=5 recommendations (limit=5), got {len(recommendations)}"
+    assert len(recommendations) > 0, "Recommendations should not be empty"
+    
+    print(f"   Got {len(recommendations)} recommendations with engine='{data['engine']}'")
+    
+    # Verify each recommendation has required fields
+    for i, rec in enumerate(recommendations):
+        assert "id" in rec, f"Recommendation {i} missing 'id'"
+        assert "title" in rec, f"Recommendation {i} missing 'title'"
+        assert "org" in rec, f"Recommendation {i} missing 'org'"
+        assert "type" in rec, f"Recommendation {i} missing 'type'"
+        assert "location" in rec, f"Recommendation {i} missing 'location'"
+        assert "deadline" in rec, f"Recommendation {i} missing 'deadline'"
+        assert "score" in rec, f"Recommendation {i} missing 'score'"
+        assert "reason" in rec, f"Recommendation {i} missing 'reason'"
+        assert "area_match" in rec, f"Recommendation {i} missing 'area_match'"
+        
+        # Verify score is a number between 0-100
+        assert isinstance(rec["score"], (int, float)), f"Score should be a number, got {type(rec['score'])}"
+        assert 0 <= rec["score"] <= 100, f"Score should be 0-100, got {rec['score']}"
+        
+        # Verify reason is non-empty string
+        assert isinstance(rec["reason"], str), f"Reason should be a string, got {type(rec['reason'])}"
+        assert len(rec["reason"].strip()) > 0, f"Reason should be non-empty, got '{rec['reason']}'"
+        
+        # Verify area_match is boolean
+        assert isinstance(rec["area_match"], bool), f"area_match should be bool, got {type(rec['area_match'])}"
+    
+    print("✓ All recommendations have required fields with correct types")
+    
+    # Verify items are sorted by score descending
+    scores = [rec["score"] for rec in recommendations]
+    assert scores == sorted(scores, reverse=True), f"Recommendations not sorted by score descending: {scores}"
+    print(f"✓ Recommendations sorted by score descending: {scores}")
+    
+    # Verify MA opportunities have area_match=true and rank high
+    ma_opportunities = [rec for rec in recommendations if rec["area_match"]]
+    print(f"   Found {len(ma_opportunities)} area-matched opportunities for Alice")
+    
+    if len(ma_opportunities) > 0:
+        # Check that MA opportunities are in the results
+        ma_titles = [rec["title"] for rec in ma_opportunities]
+        print(f"   MA opportunities: {ma_titles}")
+        
+        # Verify at least one MA opportunity is in top 3
+        top_3_has_ma = any(rec["area_match"] for rec in recommendations[:3])
+        assert top_3_has_ma, "Expected at least one MA opportunity in top 3 for Alice"
+        print("✓ MA opportunities rank at/near the top for Alice")
+    
+    # Print top 3 for visibility
+    print("\n   Top 3 recommendations for Alice:")
+    for i, rec in enumerate(recommendations[:3], 1):
+        print(f"   {i}. {rec['title']} (score={rec['score']}, area_match={rec['area_match']}, location={rec['location']})")
+        print(f"      Reason: {rec['reason']}")
+    
+    # Test 3: Diana (San Francisco, CA) - should get CA opportunities ranked higher
+    print("\n3. Testing Diana (San Francisco, CA) recommendations...")
+    diana_session = login(DIANA_EMAIL)
+    
+    diana_profile = diana_session.get(f"{API}/auth/me", timeout=15).json()
+    print(f"   Diana's location: {diana_profile.get('location')}")
+    print(f"   Diana's skills: {diana_profile.get('skills')}")
+    print(f"   Diana's interests: {diana_profile.get('interests')}")
+    
+    r = diana_session.get(f"{API}/opportunities/recommended?limit=5", timeout=15)
+    assert r.status_code == 200, f"Recommendation request failed: {r.status_code} {r.text}"
+    
+    diana_data = r.json()
+    diana_recommendations = diana_data["recommendations"]
+    
+    print(f"   Got {len(diana_recommendations)} recommendations")
+    
+    # Verify CA opportunities have area_match=true
+    ca_opportunities = [rec for rec in diana_recommendations if rec["area_match"]]
+    print(f"   Found {len(ca_opportunities)} area-matched opportunities for Diana")
+    
+    if len(ca_opportunities) > 0:
+        ca_titles = [rec["title"] for rec in ca_opportunities]
+        print(f"   CA opportunities: {ca_titles}")
+        
+        # Verify "Bay Area Youth Robotics League" is in CA opportunities (it's in San Francisco, CA)
+        bay_area_robotics = any("Bay Area" in rec["title"] for rec in ca_opportunities)
+        if bay_area_robotics:
+            print("✓ Bay Area Youth Robotics League correctly marked as area_match for Diana")
+    
+    # Print top 3 for Diana
+    print("\n   Top 3 recommendations for Diana:")
+    for i, rec in enumerate(diana_recommendations[:3], 1):
+        print(f"   {i}. {rec['title']} (score={rec['score']}, area_match={rec['area_match']}, location={rec['location']})")
+        print(f"      Reason: {rec['reason']}")
+    
+    # Verify Diana's top results are different from Alice's (personalization)
+    alice_top_titles = [rec["title"] for rec in recommendations[:3]]
+    diana_top_titles = [rec["title"] for rec in diana_recommendations[:3]]
+    
+    # They should have some differences due to different locations and skills
+    if alice_top_titles != diana_top_titles:
+        print("✓ Recommendations are personalized (Diana's top 3 differs from Alice's)")
+    else:
+        print("⚠ Warning: Diana and Alice have identical top 3 (may be expected if skills overlap)")
+    
+    # Test 4: Brand-new user with no skills and no location
+    print("\n4. Testing brand-new user with no skills/location...")
+    
+    # Register a new user
+    new_user_email = f"newuser_{os.urandom(4).hex()}@test.edu"
+    new_user_password = "testpass123"
+    
+    r = requests.post(f"{API}/auth/register", json={
+        "name": "New User",
+        "email": new_user_email,
+        "password": new_user_password,
+        "school": "Test School",
+        "grade": "10th"
+    }, timeout=15)
+    assert r.status_code == 200, f"Registration failed: {r.status_code} {r.text}"
+    
+    new_user_session = login(new_user_email, new_user_password)
+    
+    # Verify new user has no skills/interests/location
+    new_profile = new_user_session.get(f"{API}/auth/me", timeout=15).json()
+    print(f"   New user skills: {new_profile.get('skills', [])}")
+    print(f"   New user location: {new_profile.get('location', '')}")
+    
+    r = new_user_session.get(f"{API}/opportunities/recommended?limit=5", timeout=15)
+    assert r.status_code == 200, f"Recommendation request failed for new user: {r.status_code} {r.text}"
+    
+    new_user_data = r.json()
+    new_user_recommendations = new_user_data["recommendations"]
+    
+    assert len(new_user_recommendations) > 0, "New user should still get recommendations"
+    print(f"   Got {len(new_user_recommendations)} recommendations for new user")
+    
+    # Verify all have scores and area_match=false (no location)
+    for rec in new_user_recommendations:
+        assert "score" in rec and isinstance(rec["score"], (int, float)), "New user recommendations should have scores"
+        assert "area_match" in rec, "New user recommendations should have area_match field"
+        # area_match should be false since user has no location
+        if rec["location"] not in ["Remote", "Nationwide", "Online"]:
+            assert rec["area_match"] == False, f"area_match should be False for new user without location, got {rec['area_match']} for {rec['title']}"
+    
+    print("✓ New user without skills/location still gets recommendations without error")
+    print(f"✓ All area_match=false for new user (no location)")
+    
+    # Test 5: Regression - GET /api/opportunities still works
+    print("\n5. Testing regression: GET /api/opportunities still returns full list...")
+    r = alice_session.get(f"{API}/opportunities", timeout=15)
+    assert r.status_code == 200, f"GET /api/opportunities failed: {r.status_code} {r.text}"
+    
+    all_opps = r.json()
+    assert isinstance(all_opps, list), "Opportunities should be a list"
+    assert len(all_opps) == 10, f"Expected 10 opportunities, got {len(all_opps)}"
+    
+    # Verify all have location
+    for opp in all_opps:
+        assert "location" in opp, f"Opportunity {opp.get('title')} missing location"
+    
+    print(f"✓ GET /api/opportunities returns full list of {len(all_opps)} opportunities with location")
+    
+    # Test 6: Regression - GET /api/dashboard still works
+    print("\n6. Testing regression: GET /api/dashboard still works...")
+    r = alice_session.get(f"{API}/dashboard", timeout=15)
+    assert r.status_code == 200, f"GET /api/dashboard failed: {r.status_code} {r.text}"
+    
+    dashboard = r.json()
+    assert "opportunities" in dashboard, "Dashboard missing opportunities"
+    
+    print(f"✓ GET /api/dashboard still works")
+    
+    print("\n✅ All SMART OPPORTUNITIES tests passed!")
+
+
 def main():
     """Run all tests."""
     print("=" * 60)
-    print("BACKEND TESTING - Project Nexus Reviews & Connections")
+    print("BACKEND TESTING - Project Nexus Smart Opportunities")
     print("=" * 60)
     
     try:
-        test_reviews()
-        test_connections()
-        test_regression()
+        test_smart_opportunities()
         
         print("\n" + "=" * 60)
         print("✅ ALL TESTS PASSED!")

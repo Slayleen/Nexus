@@ -489,6 +489,111 @@ async def list_opportunities(user: dict = Depends(get_current_user)):
     opps = await db.opportunities.find().sort("created_at", -1).to_list(200)
     return [clean(o) for o in opps]
 
+OPEN_TO_ALL_LOC = {"Remote", "Nationwide", "Online"}
+
+def _state_of(loc: str) -> str:
+    if not loc:
+        return ""
+    parts = [p.strip() for p in loc.split(",")]
+    return parts[1] if len(parts) >= 2 else ""
+
+def _recommend_opps(user: dict, opps: list, limit: int = 8):
+    """Local, skills + area aware recommender. Returns list of opps with score/reason/area_match."""
+    import re
+    labels = []
+    for key in ("skills", "interests", "looking_for"):
+        labels += [str(t) for t in user.get(key, []) if str(t).strip()]
+    def words_of(text):
+        return {w for w in re.findall(r"[a-z0-9\+#]+", (text or "").lower()) if len(w) > 2}
+    user_state = _state_of(user.get("location", ""))
+
+    scored = []
+    for o in opps:
+        hay = " ".join([o.get("title", ""), o.get("description", ""), o.get("type", ""),
+                        " ".join(o.get("tags", []))]).lower()
+        matched = [l for l in labels if any(w in hay for w in words_of(l))]
+        # de-dup while keeping order
+        matched = list(dict.fromkeys(matched))
+        overlap = len(matched)
+        loc = o.get("location", "")
+        area_match = bool(user_state and _state_of(loc) == user_state)
+        open_all = loc in OPEN_TO_ALL_LOC
+        score = 50 + overlap * 11 + (18 if area_match else 0) + (6 if open_all else 0)
+        score = min(98, score)
+
+        first = matched[:2]
+        if first and area_match:
+            reason = f"Fits your {', '.join(first)} and it's in your area ({loc})."
+        elif first:
+            reason = f"Great match for your {', '.join(first)} background."
+        elif area_match:
+            reason = f"Right in your area ({loc})."
+        elif open_all:
+            reason = f"Open to everyone ({loc}) — worth a look."
+        else:
+            reason = "A strong pick to broaden your horizons."
+
+        item = clean(dict(o))
+        item.update({"score": score, "reason": reason, "area_match": area_match,
+                     "matched": matched[:3], "_o": overlap})
+        scored.append(item)
+
+    scored.sort(key=lambda x: (x["score"], x["_o"]), reverse=True)
+    top = scored[:limit]
+    for s in top:
+        s.pop("_o", None)
+    return top
+
+@api_router.get("/opportunities/recommended")
+async def recommended_opportunities(limit: int = 8, user: dict = Depends(get_current_user)):
+    import json
+    opps = await db.opportunities.find().to_list(200)
+    fresh = await db.users.find_one({"_id": ObjectId(user["id"])})
+    profile = clean(fresh) if fresh else user
+    local = _recommend_opps(profile, opps, limit=limit)
+
+    # Optional LLM refinement of reasons/ranking (Groq). Falls back to local silently.
+    key = os.environ.get("GROQ_API_KEY", "").strip()
+    if key and local:
+        try:
+            by_id = {clean(dict(o))["id"]: clean(dict(o)) for o in opps}
+            cand = [{"id": i["id"], "title": i["title"], "type": i.get("type"),
+                     "tags": i.get("tags", []), "location": i.get("location", ""),
+                     "description": i.get("description", "")[:200]} for i in local]
+            system = (
+                "You are Nexus AI recommending extracurricular opportunities to a high school student. "
+                "Given the student's skills, interests and home area, rank the candidates and write ONE short, "
+                "specific sentence per opportunity on why it fits (mention a skill/interest or the location). "
+                'Respond ONLY with valid JSON: {"recommendations":[{"id":"<id>","reason":"<why>","score":<0-100>}]}'
+            )
+            prompt = (f"STUDENT SKILLS: {profile.get('skills', [])}\nINTERESTS: {profile.get('interests', [])}\n"
+                      f"LOOKING FOR: {profile.get('looking_for', [])}\nAREA: {profile.get('location', '')}\n\n"
+                      f"CANDIDATES:\n{json.dumps(cand)}")
+            groq_client = AsyncGroq(api_key=key)
+            completion = await groq_client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "system", "content": system}, {"role": "user", "content": prompt}],
+                response_format={"type": "json_object"},
+            )
+            text = completion.choices[0].message.content.strip()
+            parsed = json.loads(text)
+            out = []
+            for r in parsed.get("recommendations", []):
+                base = by_id.get(r.get("id"))
+                if base:
+                    local_item = next((x for x in local if x["id"] == r["id"]), {})
+                    base.update({"reason": r.get("reason", local_item.get("reason", "")),
+                                 "score": r.get("score", local_item.get("score", 70)),
+                                 "area_match": local_item.get("area_match", False),
+                                 "matched": local_item.get("matched", [])})
+                    out.append(base)
+            if out:
+                return {"recommendations": out, "engine": "llm"}
+        except Exception as e:
+            logger.error(f"Opportunity recommend LLM error: {e}")
+
+    return {"recommendations": local, "engine": "local"}
+
 @api_router.post("/opportunities")
 async def create_opportunity(data: OpportunityInput, user: dict = Depends(get_current_user)):
     doc = data.model_dump()

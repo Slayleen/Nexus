@@ -194,6 +194,20 @@ backend:
         - working: true
           agent: "testing"
           comment: "ROUND 2 testing completed. ✓ GET /api/projects returns all projects with owner.connection_status field. ✓ All connection_status values are valid (self/none/pending_out/pending_in/connected). ✓ Alice's own project correctly shows connection_status='self'. ✓ Projects owned by others show appropriate connection_status based on relationship. ✓ Connection status updates correctly after connecting to project owner. All project owner connection_status functionality working correctly."
+  - task: "Smart Opportunities recommendation endpoint (GET /api/opportunities/recommended)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Added GET /api/opportunities/recommended?limit=N — personalized ranked opportunities matched to skills/interests/looking_for + home area (state-match boost) with per-item reason + score + area_match. Local scorer primary; optional Groq LLM refinement if GROQ_API_KEY set (empty now -> engine 'local'). Frontend: Dashboard 'For you' picks (reason + % match, still State/City filterable); Opportunity Board 'Recommended for you' top-3 section. Please test GET /api/opportunities/recommended returns {recommendations:[...], engine}; each item has score/reason/area_match/location; area-matched opps rank higher for alice@lincolnhs.edu."
+        - working: true
+          agent: "testing"
+          comment: "Comprehensive testing completed - ALL TESTS PASSED ✅. (1) RESPONSE SHAPE: Returns {recommendations:[...], engine:'local'} as expected (GROQ_API_KEY empty). (2) FIELD VALIDATION: All recommendations include id, title, org, type, location, deadline, score (0-100 number), reason (non-empty string), area_match (boolean). (3) LIMIT PARAMETER: Correctly respects limit param (limit=5 returns <=5 items). (4) SORTING: Items sorted by score descending. (5) ALICE (Boston, MA): Gets 3 MA opportunities (MIT THINK Scholars, HackMIT 2026, Boston Startup Weekend) with area_match=true ranking in top 3 (all score=79). Reason mentions skills/interests + area. (6) DIANA (San Francisco, CA): Gets Bay Area Youth Robotics League with area_match=true ranking #1 (score=98). Personalization confirmed - different top results than Alice. (7) NEW USER (no skills/location): Still returns recommendations without error, all area_match=false. (8) UNAUTHENTICATED: Returns 401 as expected. (9) REGRESSION: GET /api/opportunities returns full list (10 items) with location; GET /api/dashboard still works. All requirements met perfectly."
 
 frontend:
   - task: "Dashboard: Connections box, Find teammates -> Discover, location-scoped opportunities"
@@ -233,14 +247,12 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.2"
-  test_sequence: 3
+  test_sequence: 4
   run_ui: false
 
 test_plan:
   current_focus:
-    - "Messaging limit for strangers (1 message until connected)"
-    - "Reviews allowed for connections (not only project teammates)"
-    - "Projects owner connection_status field"
+    - "Smart Opportunities recommendation endpoint (GET /api/opportunities/recommended)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -256,7 +268,11 @@ agent_communication:
       message: "ROUND 2 PASSED: messaging 1-msg stranger limit + object response, reviews for connections, project owner connection_status, dashboard regression."
     - agent: "main"
       message: "ROUND 3 (frontend-only, no backend change): Area selection split into State + City dropdowns (profile via AreaPicker, dashboard + opportunity board filters via AreaFilter, dataset in src/constants/locations.js). Location still stored as 'City, ST' string via existing PUT /api/profile. Added leave/see-reviews from Connections page (ReviewModal, can_review forced true since connected). Verified visually via screenshots: profile State/City prefilled (Massachusetts/Boston), connections review modal opens, area filters render. No backend retest needed."
+    - agent: "main"
+      message: "ROUND 4 (Smart Opportunities): Added GET /api/opportunities/recommended?limit=N — personalized ranked opportunities matched to skills/interests/looking_for + home area (state-match boost) with per-item reason + score + area_match. Local scorer primary; optional Groq LLM refinement if GROQ_API_KEY set (empty now -> engine 'local'). Frontend: Dashboard 'For you' picks (reason + % match, still State/City filterable); Opportunity Board 'Recommended for you' top-3 section. Please test GET /api/opportunities/recommended returns {recommendations:[...], engine}; each item has score/reason/area_match/location; area-matched opps rank higher for alice@lincolnhs.edu."
     - agent: "testing"
       message: "Backend testing completed - ALL TESTS PASSED ✅. Tested all 3 high-priority backend tasks: (1) Reviews API - all functionality working including shared-project gating, reputation recompute, upsert behavior, self-review prevention. (2) Connections API - full lifecycle working including send/accept/decline, auto-accept, duplicate handling, dashboard stats. (3) Regression - endorse endpoint removed (404), reputation without endorsements, opportunities with location, profile location persists. All backend APIs are functioning correctly as per requirements. Ready for main agent to summarize and finish."
     - agent: "testing"
       message: "ROUND 2 backend testing completed - ALL TESTS PASSED ✅. Comprehensive testing of three new features: (1) MESSAGING LIMIT FOR STRANGERS - First message succeeds, second returns 403 with appropriate error. GET /api/messages/{id} returns correct object structure {messages, connected, can_send}. After connecting, unlimited messages work. (2) REVIEWS ALLOWED FOR CONNECTIONS - Non-connected users cannot review (403). After connecting, can_review=true and review succeeds. Reputation recomputes correctly. Reviews for non-teammates/non-connections still blocked. (3) PROJECTS OWNER CONNECTION_STATUS - All projects include owner.connection_status field with valid values (self/none/pending_out/connected). Own projects show 'self'. Status updates correctly after connecting. DASHBOARD REGRESSION - stats.connections and stats.connection_requests present, all opportunities include location field. All backend APIs functioning correctly. Ready for main agent to summarize and finish."
+    - agent: "testing"
+      message: "ROUND 4 (Smart Opportunities) backend testing completed - ALL TESTS PASSED ✅. Comprehensive testing of GET /api/opportunities/recommended endpoint: (1) AUTHENTICATION - Unauthenticated requests correctly return 401. (2) RESPONSE STRUCTURE - Returns {recommendations:[...], engine:'local'} with all required fields (id, title, org, type, location, deadline, score 0-100, reason non-empty string, area_match boolean). (3) PERSONALIZATION - Alice (Boston, MA) gets 3 MA opportunities (MIT THINK, HackMIT, Boston Startup Weekend) with area_match=true in top 3 (score=79). Diana (San Francisco, CA) gets Bay Area Youth Robotics League with area_match=true ranking #1 (score=98). Different top results confirm personalization works. (4) EDGE CASES - New user with no skills/location still gets recommendations (area_match=false for all). Limit parameter works correctly (limit=5 returns <=5 items). Items sorted by score descending. (5) REGRESSION - GET /api/opportunities returns full list (10 items) with location. GET /api/dashboard still works. All requirements met perfectly. Ready for main agent to summarize and finish."

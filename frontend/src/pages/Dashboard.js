@@ -13,14 +13,16 @@ export default function Dashboard() {
   const { user } = useAuth();
   const nav = useNavigate();
   const [data, setData] = useState(null);
+  const [recs, setRecs] = useState([]);
   const [area, setArea] = useState({ state: "all", city: "all" });
 
   useEffect(() => {
     api.get("/dashboard").then((r) => setData(r.data)).catch(() => {});
+    api.get("/opportunities/recommended?limit=12").then((r) => setRecs(r.data.recommendations || [])).catch(() => {});
   }, []);
 
   const stats = data?.stats || {};
-  const allOpps = useMemo(() => data?.opportunities || [], [data]);
+  const allOpps = useMemo(() => recs, [recs]);
 
   // Locations available across opportunities (excluding the "open to everyone" ones)
   const locations = useMemo(() => {
@@ -31,14 +33,14 @@ export default function Dashboard() {
 
   // Default the area to the student's own area (constrain) if it has opportunities.
   useEffect(() => {
-    if (data && area.state === "all" && user.location) {
+    if (recs.length && area.state === "all" && user.location) {
       const { state, city } = parseLocation(user.location);
       if (state && locations.some((l) => parseLocation(l).state === state)) {
         setArea({ state, city: locations.some((l) => l === user.location) ? city : "all" });
       }
     }
     // eslint-disable-next-line
-  }, [data, locations]);
+  }, [recs, locations]);
 
   const opps = useMemo(() => {
     if (area.state === "all") return allOpps;
@@ -97,10 +99,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Opportunities — scoped by area */}
+        {/* Opportunities — AI-picked & scoped by area */}
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-display text-2xl font-bold tracking-tight">Opportunities</h2>
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkle size={20} weight="fill" className="text-[#FF7B54]" />
+            <h2 className="font-display text-2xl font-bold tracking-tight">For you</h2>
           </div>
 
           {/* Area / scope selector: State + City */}
@@ -108,22 +111,28 @@ export default function Dashboard() {
             <label className="nb-label flex items-center gap-1 mb-1"><MapPin size={14} weight="bold" /> Your area</label>
             <AreaFilter locations={locations} state={area.state} city={area.city} onChange={setArea} testidPrefix="opp" />
             <p className="text-xs text-[#4A4A4A] mt-1">
-              {area.state === "all" ? "Showing all areas (broadened)." : "Showing your area plus remote/nationwide."}
+              {area.state === "all" ? "AI picks across all areas (broadened)." : "AI picks in your area plus remote/nationwide."}
             </p>
           </div>
 
           <div className="space-y-3">
             {opps.length === 0 && (
-              <div className="nb-card p-4 text-sm text-[#4A4A4A]">No opportunities in this area yet — try broadening the scope.</div>
+              <div className="nb-card p-4 text-sm text-[#4A4A4A]">No matches in this area yet — try broadening the scope.</div>
             )}
             {opps.slice(0, 6).map((o) => (
               <div key={o.id} className="nb-card p-4" data-testid={`dash-opp-${o.id}`}>
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <span className="nb-chip bg-[#FFD166]">{o.type}</span>
                   {o.location && <span className="nb-chip bg-white text-xs"><MapPin size={12} weight="bold" /> {o.location}</span>}
+                  {typeof o.score === "number" && <span className="nb-chip bg-[#A0C4FF] text-xs ml-auto">{o.score}% match</span>}
                 </div>
                 <div className="font-bold leading-tight">{o.title}</div>
                 <div className="text-xs text-[#4A4A4A] mt-1">{o.org}</div>
+                {o.reason && (
+                  <div className="flex items-start gap-1 text-xs font-medium text-[#4A4A4A] mt-2 bg-[#A0C4FF]/20 border-2 border-[#0A0A0A]/10 rounded-lg p-2">
+                    <Sparkle size={13} weight="fill" className="text-[#FF7B54] mt-0.5 shrink-0" /> {o.reason}
+                  </div>
+                )}
                 <div className="flex items-center gap-1 text-xs font-bold text-[#FF7B54] mt-2">
                   <CalendarBlank size={14} weight="bold" /> {o.deadline}
                 </div>
