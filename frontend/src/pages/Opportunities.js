@@ -19,7 +19,7 @@ export default function Opportunities() {
   const [opps, setOpps] = useState([]);
   const [recs, setRecs] = useState([]);
   const [filter, setFilter] = useState("All");
-  const [area, setArea] = useState({ state: "all", city: "all" });
+  const [area, setArea] = useState({ state: "all", cities: [] });
   const [open, setOpen] = useState(false);
 
   const loadOpps = () => api.get("/opportunities").then((r) => setOpps(r.data)).catch(() => {});
@@ -47,7 +47,7 @@ export default function Opportunities() {
       if (OPEN_TO_ALL.includes(o.location)) areaOk = true;
       else {
         const p = parseLocation(o.location);
-        areaOk = p.state === area.state && (area.city === "all" || p.city === area.city);
+        areaOk = p.state === area.state && (!area.cities?.length || area.cities.includes(p.city));
       }
     }
     return typeOk && areaOk;
@@ -113,7 +113,7 @@ export default function Opportunities() {
       <div className="flex items-center gap-2 mb-6 max-w-md">
         <MapPin size={18} weight="bold" className="text-[#4A4A4A] shrink-0" />
         <div className="flex-1">
-          <AreaFilter state={area.state} city={area.city} onChange={setArea} testidPrefix="oppboard" />
+          <AreaFilter state={area.state} cities={area.cities} onChange={setArea} testidPrefix="oppboard" />
         </div>
       </div>
 
