@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { api } from "@/api";
-import { PageHead } from "@/components/common";
+import { api, formatError } from "@/api";
+import { useAuth } from "@/AuthContext";
+import { PageHead, DeleteButton } from "@/components/common";
 import { AreaFilter, AreaPicker } from "@/components/AreaSelect";
 import { parseLocation } from "@/constants/locations";
 import { Trophy, CalendarBlank, ArrowSquareOut, Buildings, MapPin, Sparkle, Plus, X, Globe, MapPinLine } from "@phosphor-icons/react";
@@ -14,6 +15,7 @@ const TYPE_COLOR = {
 const OPEN_TO_ALL = ["Remote", "Nationwide", "Online"];
 
 export default function Opportunities() {
+  const { user } = useAuth();
   const [opps, setOpps] = useState([]);
   const [recs, setRecs] = useState([]);
   const [filter, setFilter] = useState("All");
@@ -26,6 +28,17 @@ export default function Opportunities() {
     loadOpps();
     api.get("/opportunities/recommended?limit=3").then((r) => setRecs(r.data.recommendations || [])).catch(() => {});
   }, []);
+
+  const deleteOpp = async (o) => {
+    try {
+      await api.delete(`/opportunities/${o.id}`);
+      toast.success("Opportunity deleted.");
+      setOpps((os) => os.filter((x) => x.id !== o.id));
+      setRecs((rs) => rs.filter((x) => x.id !== o.id));
+    } catch (e) {
+      toast.error(formatError(e?.response?.data?.detail));
+    }
+  };
 
   const shown = opps.filter((o) => {
     const typeOk = filter === "All" || o.type === filter;
@@ -60,7 +73,10 @@ export default function Opportunities() {
               <div key={o.id} className="nb-card nb-card-hover p-5 flex flex-col bg-[#A0C4FF]/25" data-testid={`opp-rec-${o.id}`}>
                 <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                   <span className={`nb-chip ${TYPE_COLOR[o.type] || "bg-white"}`}>{o.type}</span>
-                  {typeof o.score === "number" && <span className="nb-chip bg-white text-xs">{o.score}% match</span>}
+                  <div className="flex items-center gap-2">
+                    {typeof o.score === "number" && <span className="nb-chip bg-white text-xs">{o.score}% match</span>}
+                    {o.posted_by === user.id && <DeleteButton onDelete={() => deleteOpp(o)} label="opportunity" testId={`delete-opp-rec-${o.id}`} />}
+                  </div>
                 </div>
                 <h3 className="font-display text-lg font-bold tracking-tight leading-tight">{o.title}</h3>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-bold text-[#4A4A4A] mt-1 mb-2">
@@ -104,11 +120,14 @@ export default function Opportunities() {
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
         {shown.map((o) => (
           <div key={o.id} className="nb-card nb-card-hover p-5 flex flex-col" data-testid={`opp-${o.id}`}>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
               <div className="w-10 h-10 bg-[#FFD166] border-2 border-[#0A0A0A] rounded-lg flex items-center justify-center">
                 <Trophy size={20} weight="bold" />
               </div>
-              <span className={`nb-chip ${TYPE_COLOR[o.type] || "bg-white"}`}>{o.type}</span>
+              <div className="flex items-center gap-2">
+                <span className={`nb-chip ${TYPE_COLOR[o.type] || "bg-white"}`}>{o.type}</span>
+                {o.posted_by === user.id && <DeleteButton onDelete={() => deleteOpp(o)} label="opportunity" testId={`delete-opp-${o.id}`} />}
+              </div>
             </div>
             <h3 className="font-display text-xl font-bold tracking-tight leading-tight">{o.title}</h3>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-bold text-[#4A4A4A] mt-1 mb-2">

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { api, formatError } from "@/api";
 import { useAuth } from "@/AuthContext";
-import { Avatar, Chips } from "@/components/common";
+import { Avatar, Chips, DeleteButton } from "@/components/common";
 import { ArrowLeft, Handshake, Clock, CheckCircle, Check, ChatCircle } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
@@ -33,6 +33,16 @@ export default function ProjectDetail() {
       else toast.success(`Connection request sent to ${project.owner?.name?.split(" ")[0]}.`);
       loadProject();
     } catch (e) { toast.error(formatError(e?.response?.data?.detail)); }
+  };
+
+  const deleteProject = async () => {
+    try {
+      await api.delete(`/projects/${project.id}`);
+      toast.success("Project deleted.");
+      navigate("/app/projects");
+    } catch (e) {
+      toast.error(formatError(e?.response?.data?.detail));
+    }
   };
 
   const submitComment = async (e) => {
@@ -116,7 +126,10 @@ export default function ProjectDetail() {
             </div>
           </div>
           {project.owner_id === user.id
-            ? <span className="nb-chip bg-white">You own this</span>
+            ? <div className="flex items-center gap-2">
+                <span className="nb-chip bg-white">You own this</span>
+                <DeleteButton onDelete={deleteProject} label="project" testId={`delete-project-${project.id}`} />
+              </div>
             : project.owner?.connection_status === "connected"
               ? <span className="nb-chip bg-[#2ECC71] text-white"><Check size={14} weight="bold" /> Connected</span>
               : project.owner?.connection_status === "pending_out"
