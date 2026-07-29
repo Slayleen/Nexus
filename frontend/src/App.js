@@ -8,6 +8,7 @@ import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import Match from "@/pages/Match";
 import Projects from "@/pages/Projects";
+import ProjectDetail from "@/pages/ProjectDetail";
 import Opportunities from "@/pages/Opportunities";
 import Messages from "@/pages/Messages";
 import Forum from "@/pages/Forum";
@@ -49,6 +50,7 @@ function App() {
           <Route path="/app" element={<Protected><Dashboard /></Protected>} />
           <Route path="/app/match" element={<Protected><Match /></Protected>} />
           <Route path="/app/projects" element={<Protected><Projects /></Protected>} />
+          <Route path="/app/projects/:id" element={<Protected><ProjectDetail /></Protected>} />
           <Route path="/app/opportunities" element={<Protected><Opportunities /></Protected>} />
           <Route path="/app/discover" element={<Protected><Discover /></Protected>} />
           <Route path="/app/connections" element={<Protected><Connections /></Protected>} />
