@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "@/api";
 import { useAuth } from "@/AuthContext";
 import { PageHead, Avatar, Reputation } from "@/components/common";
+import AdSlot from "@/components/AdSlot";
 import { AreaFilter } from "@/components/AreaSelect";
 import { parseLocation, citiesForState } from "@/constants/locations";
 import { Sparkle, Rocket, Trophy, Handshake, ArrowRight, CalendarBlank, MapPin } from "@phosphor-icons/react";
@@ -68,6 +69,8 @@ export default function Dashboard() {
         <h3 className="font-display text-2xl md:text-3xl font-bold tracking-tight">Tell me your goal, I'll find your team.</h3>
         <p className="font-medium mt-1 flex items-center gap-1">Try "I need a designer for my startup" <ArrowRight size={16} weight="bold" /></p>
       </div>
+
+      <AdSlot className="mb-8" />
 
       <div className="grid md:grid-cols-3 gap-6">
         {/* Suggested teammates */}

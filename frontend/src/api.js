@@ -7,6 +7,18 @@ export const api = axios.create({
   withCredentials: true,
 });
 
+// If the trial expires mid-session, force a reload so AuthContext refetches
+// /auth/me and the Protected route shows the TrialExpired page.
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 403 && err.response?.data?.detail?.code === "trial_expired") {
+      window.location.href = "/app";
+    }
+    return Promise.reject(err);
+  }
+);
+
 export function formatError(detail) {
   if (detail == null) return "Something went wrong. Please try again.";
   if (typeof detail === "string") return detail;

@@ -53,6 +53,24 @@ def age_from_birthdate(birthdate: date) -> int:
     today = date.today()
     return today.year - birthdate.year - ((today.month, today.day) < (birthdate.month, birthdate.day))
 
+TRIAL_DAYS = 28  # the website is a 4-week free beta; after this, users are pointed to the app
+
+def with_trial_status(user: dict) -> dict:
+    try:
+        created_dt = datetime.fromisoformat(user.get("created_at", ""))
+        if created_dt.tzinfo is None:
+            created_dt = created_dt.replace(tzinfo=timezone.utc)
+    except (TypeError, ValueError):
+        created_dt = datetime.now(timezone.utc)
+    trial_ends_at = created_dt + timedelta(days=TRIAL_DAYS)
+    user["trial_ends_at"] = trial_ends_at.isoformat()
+    user["trial_expired"] = datetime.now(timezone.utc) > trial_ends_at
+    return user
+
+# Endpoints reachable even after the trial ends, so an expired user can still
+# see why they're locked out and sign out — everything else 403s.
+TRIAL_EXEMPT_PATHS = {"/api/auth/me", "/api/auth/logout"}
+
 def clean(doc: dict) -> dict:
     if not doc:
         return doc
@@ -196,7 +214,10 @@ async def get_current_user(request: Request) -> dict:
         user = await db.users.find_one({"_id": ObjectId(payload["sub"])})
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
-        return clean(user)
+        user = with_trial_status(clean(user))
+        if user["trial_expired"] and request.url.path not in TRIAL_EXEMPT_PATHS:
+            raise HTTPException(status_code=403, detail={"code": "trial_expired", "message": "Your 4-week free trial has ended"})
+        return user
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
@@ -233,7 +254,7 @@ async def register(data: RegisterInput, response: Response):
     uid = str(res.inserted_id)
     set_auth_cookie(response, create_access_token(uid, email))
     doc["_id"] = res.inserted_id
-    return clean(doc)
+    return with_trial_status(clean(doc))
 
 @api_router.post("/auth/login")
 async def login(data: LoginInput, response: Response):
@@ -242,7 +263,7 @@ async def login(data: LoginInput, response: Response):
     if not user or not verify_password(data.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     set_auth_cookie(response, create_access_token(str(user["_id"]), email))
-    return clean(user)
+    return with_trial_status(clean(user))
 
 @api_router.post("/auth/logout")
 async def logout(response: Response):

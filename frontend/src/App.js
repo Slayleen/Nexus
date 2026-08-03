@@ -19,6 +19,7 @@ import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
 import Cookies from "@/pages/Cookies";
 import Contact from "@/pages/Contact";
+import TrialExpired from "@/pages/TrialExpired";
 import CookieBanner from "@/components/CookieBanner";
 
 function Loader() {
@@ -33,6 +34,7 @@ function Protected({ children }) {
   const { user, ready } = useAuth();
   if (!ready) return <Loader />;
   if (!user) return <Navigate to="/" replace />;
+  if (user.trial_expired) return <TrialExpired />;
   return <AppShell>{children}</AppShell>;
 }
 
