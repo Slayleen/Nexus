@@ -113,10 +113,10 @@ export default function Auth({ mode }) {
                 type="checkbox"
                 checked={agreed}
                 onChange={(e) => setAgreed(e.target.checked)}
-                className="w-4 h-4 mt-0.5 shrink-0 accent-[#FF7B54]"
+                className="w-5 h-5 mt-0.5 shrink-0 accent-[#FF7B54]"
                 data-testid="auth-agree-checkbox"
               />
-              <span className="text-xs font-medium text-[#4A4A4A]">
+              <span className="text-sm font-medium text-[#4A4A4A]">
                 I agree to Nexus's{" "}
                 <Link to="/terms" className="font-bold underline">Terms of Service</Link> and{" "}
                 <Link to="/privacy" className="font-bold underline">Privacy Policy</Link>.
