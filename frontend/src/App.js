@@ -15,6 +15,9 @@ import Forum from "@/pages/Forum";
 import Profile from "@/pages/Profile";
 import Discover from "@/pages/Discover";
 import Connections from "@/pages/Connections";
+import Terms from "@/pages/Terms";
+import Privacy from "@/pages/Privacy";
+import Cookies from "@/pages/Cookies";
 
 function Loader() {
   return (
@@ -47,6 +50,9 @@ function App() {
           <Route path="/" element={<PublicOnly><Landing /></PublicOnly>} />
           <Route path="/login" element={<PublicOnly><Auth mode="login" /></PublicOnly>} />
           <Route path="/signup" element={<PublicOnly><Auth mode="signup" /></PublicOnly>} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/cookies" element={<Cookies />} />
           <Route path="/app" element={<Protected><Dashboard /></Protected>} />
           <Route path="/app/match" element={<Protected><Match /></Protected>} />
           <Route path="/app/projects" element={<Protected><Projects /></Protected>} />

@@ -3,6 +3,7 @@ import {
   GraduationCap, Sparkle, Rocket, Trophy, UsersThree, ShieldCheck,
   ArrowRight, Lightning, Handshake, ChartLineUp,
 } from "@phosphor-icons/react";
+import { LegalFooter } from "@/components/LegalLayout";
 
 const Chip = ({ children }) => (
   <span className="nb-chip bg-white">{children}</span>
@@ -114,9 +115,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <footer className="border-t-2 border-[#0A0A0A] py-8 text-center text-sm font-medium text-[#4A4A4A]">
-        Project Nexus — built for ambitious high school students.
-      </footer>
+      <LegalFooter />
     </div>
   );
 }
