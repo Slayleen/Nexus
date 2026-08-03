@@ -6,6 +6,7 @@ export const INSTAGRAM_URL =
   "https://www.instagram.com/nexus.ed.official?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==";
 
 const LEGAL_LINKS = [
+  { to: "/contact", label: "Contact Us" },
   { to: "/terms", label: "Terms of Service" },
   { to: "/privacy", label: "Privacy Policy" },
   { to: "/cookies", label: "Cookies Policy" },

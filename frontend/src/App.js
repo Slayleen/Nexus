@@ -18,6 +18,8 @@ import Connections from "@/pages/Connections";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
 import Cookies from "@/pages/Cookies";
+import Contact from "@/pages/Contact";
+import CookieBanner from "@/components/CookieBanner";
 
 function Loader() {
   return (
@@ -46,10 +48,12 @@ function App() {
     <AuthProvider>
       <Toaster position="top-right" richColors />
       <BrowserRouter>
+        <CookieBanner />
         <Routes>
           <Route path="/" element={<PublicOnly><Landing /></PublicOnly>} />
           <Route path="/login" element={<PublicOnly><Auth mode="login" /></PublicOnly>} />
           <Route path="/signup" element={<PublicOnly><Auth mode="signup" /></PublicOnly>} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/cookies" element={<Cookies />} />

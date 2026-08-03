@@ -106,6 +106,14 @@ export default function Auth({ mode }) {
             {loading ? "Please wait…" : isSignup ? "Create account" : "Log in"}
           </button>
 
+          {isSignup && (
+            <p className="text-center text-xs font-medium text-[#4A4A4A] mt-4" data-testid="auth-legal-notice">
+              By creating an account, you agree to our{" "}
+              <Link to="/terms" className="font-bold underline">Terms of Service</Link> and{" "}
+              <Link to="/privacy" className="font-bold underline">Privacy Policy</Link>.
+            </p>
+          )}
+
           <p className="text-center text-sm font-medium mt-5">
             {isSignup ? "Already have an account? " : "New to Nexus? "}
             <Link to={isSignup ? "/login" : "/signup"} className="font-bold underline" data-testid="auth-switch">

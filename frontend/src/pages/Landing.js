@@ -22,6 +22,7 @@ export default function Landing() {
             <span className="font-display text-xl font-black tracking-tight">Nexus</span>
           </div>
           <div className="flex items-center gap-3">
+            <Link to="/contact" data-testid="nav-contact-link" className="font-bold text-sm hidden sm:block hover:underline">Contact us</Link>
             <Link to="/login" data-testid="nav-login-link" className="font-bold text-sm hidden sm:block hover:underline">Log in</Link>
             <Link to="/signup" data-testid="nav-signup-link" className="nb-btn text-sm">Get started</Link>
           </div>
