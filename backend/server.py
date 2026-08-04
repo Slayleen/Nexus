@@ -961,6 +961,34 @@ async def dashboard(user: dict = Depends(get_current_user)):
         }
     }
 
+# --- TEMPORARY: one-time full data export for the MongoDB migration ---
+# Remove this endpoint once the migration to the new database is confirmed
+# done. Protected by ADMIN_EXPORT_SECRET (set only on the live deployment,
+# never committed) rather than a user login, since this needs to work
+# independent of any specific account and shouldn't be reachable by anyone
+# who doesn't hold that secret.
+EXPORT_COLLECTIONS = [
+    "users", "projects", "opportunities", "messages", "forum_posts",
+    "forum_comments", "project_comments", "connections", "reviews",
+]
+
+def _export_ready(doc: dict) -> dict:
+    doc = dict(doc)
+    doc["_id"] = str(doc.pop("_id"))
+    return doc
+
+@api_router.get("/admin/export")
+async def admin_export(request: Request):
+    secret = os.environ.get("ADMIN_EXPORT_SECRET", "").strip()
+    auth = request.headers.get("Authorization", "")
+    if not secret or auth != f"Bearer {secret}":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    out = {}
+    for name in EXPORT_COLLECTIONS:
+        docs = await db[name].find().to_list(100000)
+        out[name] = [_export_ready(d) for d in docs]
+    return out
+
 app.include_router(api_router)
 
 app.add_middleware(
