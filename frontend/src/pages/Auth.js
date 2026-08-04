@@ -64,9 +64,15 @@ export default function Auth({ mode }) {
           <h1 className="font-display text-3xl font-black tracking-tight mb-1">
             {isSignup ? "Create your account" : "Welcome back"}
           </h1>
-          <p className="text-[#4A4A4A] font-medium mb-6">
+          <p className="text-[#4A4A4A] font-medium mb-3">
             {isSignup ? "Use your school email to get verified." : "Log in to your Nexus workspace."}
           </p>
+
+          {isSignup && (
+            <span className="nb-chip bg-[#FFD166] mb-4" data-testid="auth-trial-badge">
+              🎉 Starts your free 4-week trial — no payment required
+            </span>
+          )}
 
           {error && (
             <div className="mb-4 nb-card bg-[#FF3B30]/10 border-[#FF3B30] p-3 text-sm font-bold text-[#FF3B30]" data-testid="auth-error">

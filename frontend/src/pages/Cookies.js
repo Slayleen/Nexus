@@ -2,7 +2,7 @@ import LegalLayout, { CONTACT_EMAIL } from "@/components/LegalLayout";
 
 export default function Cookies() {
   return (
-    <LegalLayout label="Legal" title="Cookies Policy" updated="August 2, 2026">
+    <LegalLayout label="Legal" title="Cookies Policy" updated="August 3, 2026">
       <h2>1. What this policy covers</h2>
       <p>
         This page explains how Project Nexus ("Nexus", "we", "us") uses cookies and
@@ -11,8 +11,9 @@ export default function Cookies() {
 
       <h2>2. What cookies we use</h2>
       <p>
-        Nexus uses a single <strong>essential cookie</strong> — we don't currently use
-        advertising, analytics, or third-party tracking cookies.
+        The Nexus website uses one <strong>essential cookie</strong> plus{" "}
+        <strong>advertising cookies</strong> from Google AdSense, which funds the free
+        4-week trial. We don't use any other analytics or tracking cookies.
       </p>
       <ul>
         <li>
@@ -23,14 +24,32 @@ export default function Cookies() {
           expires automatically after about 7 days, and can't be read by JavaScript or
           third parties.
         </li>
+        <li>
+          <strong>Google AdSense</strong> — we show ads on the website (not the app) to
+          keep the free trial free. Google may set cookies (for example, to measure ad
+          performance or personalize ads) when you view or interact with an ad. You can
+          see and control the ad personalization Google uses across the web at{" "}
+          <a href="https://adssettings.google.com" target="_blank" rel="noopener noreferrer">
+            Google Ads Settings
+          </a>, and learn more about how Google uses this data in{" "}
+          <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer">
+            Google's Partner Sites policy
+          </a>.
+        </li>
       </ul>
 
-      <h2>3. Why we don't need a cookie banner (yet)</h2>
+      <h2>3. Managing advertising cookies</h2>
       <p>
-        Because our only cookie is strictly necessary to provide the service you asked
-        for (staying logged in), most privacy laws don't require a consent banner for
-        it. If we ever add analytics, advertising, or other non-essential cookies, we
-        will update this page and add a consent option before doing so.
+        Because our own <strong>access_token</strong> cookie is strictly necessary to
+        keep you logged in, it doesn't require consent under most privacy laws.
+        Google's advertising cookies aren't strictly necessary, though, so where the
+        law requires it (for example, for visitors in the EU/UK), we honor Google's own
+        consent and ad-personalization controls. You can opt out of personalized
+        advertising at any time via{" "}
+        <a href="https://adssettings.google.com" target="_blank" rel="noopener noreferrer">
+          Google Ads Settings
+        </a>{" "}
+        without affecting your ability to use Nexus.
       </p>
 
       <h2>4. Local storage</h2>

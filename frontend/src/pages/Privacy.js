@@ -2,7 +2,7 @@ import LegalLayout, { CONTACT_EMAIL, INSTAGRAM_URL } from "@/components/LegalLay
 
 export default function Privacy() {
   return (
-    <LegalLayout label="Legal" title="Privacy Policy" updated="August 2, 2026">
+    <LegalLayout label="Legal" title="Privacy Policy" updated="August 3, 2026">
       <h2>1. Overview</h2>
       <p>
         This Privacy Policy explains what information Project Nexus ("Nexus", "we",
@@ -39,6 +39,14 @@ export default function Privacy() {
         rule-based logic instead. We also use a hosted database provider to store
         platform data. These providers process data on our behalf and are not permitted
         to use it for their own purposes.
+      </p>
+      <p>
+        The Nexus website (not the app) is a free 4-week trial supported by{" "}
+        <strong>Google AdSense</strong> advertising. Google may use cookies and similar
+        technology to serve and measure ads while you're on the site — see our{" "}
+        <a href="/cookies">Cookies Policy</a> for details and how to control ad
+        personalization. We don't share your account information (like your name or
+        email) with Google for advertising purposes.
       </p>
 
       <h2>5. What other students can see</h2>

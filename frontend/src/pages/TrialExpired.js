@@ -2,6 +2,13 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/AuthContext";
 import { DeviceMobile, SignOut } from "@phosphor-icons/react";
 
+// Real, deterministic Play Store URL from the app's package id (capacitor.config.json
+// appId: com.nexusapp.mobile) — this works automatically the moment the app is
+// published, no code change needed. There's no equivalent stable URL for the App
+// Store until the app exists in App Store Connect (that ID is assigned then).
+const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.nexusapp.mobile";
+const QR_CODE_SRC = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data=${encodeURIComponent(PLAY_STORE_URL)}`;
+
 export default function TrialExpired() {
   const { logout } = useAuth();
   const nav = useNavigate();
@@ -36,12 +43,29 @@ export default function TrialExpired() {
             projects, and building your portfolio, download the Nexus app.
           </p>
 
+          <a
+            href={PLAY_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="nb-card inline-block p-3 mb-4 bg-white"
+            data-testid="trial-expired-qr"
+          >
+            <img src={QR_CODE_SRC} alt="Scan to get Nexus on Google Play" width={180} height={180} />
+          </a>
+          <p className="text-sm font-bold mb-6">Scan to get Nexus on Google Play</p>
+
           <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
+            <a
+              href={PLAY_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nb-chip bg-[#FFD166] justify-center py-3 px-5"
+              data-testid="trial-expired-play-store"
+            >
+              Get it on Google Play
+            </a>
             <div className="nb-chip bg-white justify-center py-3 px-5 opacity-70 cursor-not-allowed" data-testid="trial-expired-app-store">
               App Store — coming soon
-            </div>
-            <div className="nb-chip bg-white justify-center py-3 px-5 opacity-70 cursor-not-allowed" data-testid="trial-expired-play-store">
-              Google Play — coming soon
             </div>
           </div>
 
